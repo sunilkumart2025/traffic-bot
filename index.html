@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Management Dashboard</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha2d14-r4O+15d6s/gR0uB8t6Qv+6E4s+t910a+138f/Vd/j6N+j6X2/L+X/j9w59+d5+t9d8+X1d1d8d" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha2d14-rt9+16d/Q3a+KxN+l+jK+p6+3E4/l+t910a+138f/Vd/j6N+j6X2/L+X/j9w59+d5+t9d8+X1d1d8d" crossorigin=""></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.heat for heatmap layer -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1320; /* Dark blue-gray */
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+            border-radius: 1rem;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); /* Blue shadow */
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: rgba(23, 27, 36, 0.9);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            border-radius: 0.5rem;
+            border: 1px solid #3b82f6;
+        }
+        .leaflet-popup-content p {
+            margin: 0;
+            line-height: 1.4;
+        }
+        .leaflet-popup-content h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .text-neon-clear { color: #22c55e; } /* Green */
+        .text-neon-moderate { color: #f97316; } /* Orange */
+        .text-neon-congested { color: #ef4444; } /* Red */
+        .blinking { animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.2; } }
+        /* For scrolling alerts */
+        .marquee {
+            white-space: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .marquee span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+        /* Custom corner alert styles */
+        #corner-alert {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            max-width: 300px;
+            background-color: #1a202c;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            display: none;
+            z-index: 100;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-out {
+            animation: fadeOut 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(20px); }
+        }
+        .leaflet-container {
+            background-color: #0d1320;
+        }
+    </style>
+</head>
+<body class="bg-[#0d1320] text-gray-300">
+    <div class="p-4 md:p-8 space-y-8 h-screen flex flex-col">
+        <!-- Main Dashboard Header -->
+        <div class="flex flex-col md:flex-row items-center justify-between p-4 bg-gray-900 rounded-2xl shadow-lg border border-gray-700">
+            <h1 class="text-3xl font-bold text-blue-400 mb-2 md:mb-0">Chennai Traffic Command Center</h1>
+            <div id="alerts-banner" class="marquee text-lg text-yellow-300 flex-grow text-center md:text-left md:ml-8">
+                <span id="alerts-text">✅ Automatic Mode Active</span>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Map Container (70%) -->
+            <div class="lg:col-span-2 relative p-2 bg-gray-900 rounded-2xl shadow-lg border border-gray-700">
+                <div id="map" class="h-full w-full rounded-xl"></div>
+            </div>
+
+            <!-- Side Panel (30%) -->
+            <div class="lg:col-span-1 flex flex-col space-y-8">
+                <!-- Real-Time Stats Panel -->
+                <div class="p-6 bg-gray-900 rounded-2xl shadow-lg border border-gray-700 space-y-4">
+                    <h2 class="text-xl font-bold text-blue-400">Real-Time Stats</h2>
+                    <div class="grid grid-cols-2 gap-4 text-sm font-mono">
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Signals Monitored</div>
+                            <div id="total-signals" class="text-2xl font-bold text-blue-400">0</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Clear Signals</div>
+                            <div id="clear-signals" class="text-2xl font-bold text-green-500">0</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Moderate Signals</div>
+                            <div id="moderate-signals" class="text-2xl font-bold text-orange-500">0</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Congested Signals</div>
+                            <div id="congested-signals" class="text-2xl font-bold text-red-500">0</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Accidents Detected</div>
+                            <div id="accidents-detected" class="text-2xl font-bold text-red-500">0</div>
+                        </div>
+                        <div class="p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Emergency Vehicles</div>
+                            <div id="emergency-vehicles" class="text-2xl font-bold text-white blinking">0</div>
+                        </div>
+                        <div class="col-span-2 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Average Vehicle Count</div>
+                            <div id="avg-vehicle-count" class="text-2xl font-bold text-purple-400">0</div>
+                        </div>
+                        <div class="col-span-2 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">CO₂ Emissions (approx.)</div>
+                            <div id="co2-emission" class="text-2xl font-bold text-green-400">0 kg/min</div>
+                        </div>
+                        <div class="col-span-2 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                            <div class="text-gray-400">Energy Saved (approx.)</div>
+                            <div id="energy-saved" class="text-2xl font-bold text-cyan-400">0 kWh/day</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fines & Violations Panel -->
+                <div class="p-6 bg-gray-900 rounded-2xl shadow-lg border border-gray-700 flex-grow">
+                    <h2 class="text-xl font-bold text-blue-400 mb-4">Fines & Violations</h2>
+                    <div id="fines-list" class="space-y-2 overflow-y-auto h-[200px] md:h-auto">
+                        <!-- Fined vehicles will be listed here -->
+                        <div class="text-gray-500 text-center py-4">No recent violations.</div>
+                    </div>
+                </div>
+
+                <!-- Advanced Analytics (Charts) -->
+                <div class="p-6 bg-gray-900 rounded-2xl shadow-lg border border-gray-700 flex flex-col space-y-4">
+                    <h2 class="text-xl font-bold text-blue-400">Advanced Analytics</h2>
+                    <!-- Chart 1: Congestion Trend (Line Chart) -->
+                    <div class="bg-gray-800 p-4 rounded-lg h-48">
+                        <h3 class="text-center font-bold text-gray-400 mb-2">City-wide Congestion Trend</h3>
+                        <canvas id="congestionTrendChart"></canvas>
+                    </div>
+                    <!-- Chart 2: Predictive Congestion (Line Chart) -->
+                    <div class="bg-gray-800 p-4 rounded-lg h-48">
+                        <h3 class="text-center font-bold text-gray-400 mb-2">Predictive Congestion (10 min)</h3>
+                        <canvas id="predictiveChart"></canvas>
+                    </div>
+                    <!-- Chart 3: Top 3 Busiest Junctions (Bar Chart) -->
+                    <div class="bg-gray-800 p-4 rounded-lg h-48">
+                        <h3 class="text-center font-bold text-gray-400 mb-2">Top 3 Busiest Junctions</h3>
+                        <canvas id="busiestJunctionsChart"></canvas>
+                    </div>
+                    <!-- Chart 4: Signal Distribution (Pie Chart) -->
+                    <div class="bg-gray-800 p-4 rounded-lg h-48">
+                        <h3 class="text-center font-bold text-gray-400 mb-2">Signal Status Distribution</h3>
+                        <canvas id="signalDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Emergency Broadcast Ticker -->
+        <div id="broadcast-ticker" class="w-full bg-red-900 text-white font-bold text-sm py-2 px-4 rounded-lg shadow-lg border border-red-700 text-center">
+            <span id="broadcast-message">Emergency Broadcast: No active alerts.</span>
+        </div>
+    </div>
+
+    <!-- The Corner Alert Popup -->
+    <div id="corner-alert" class="hidden">
+        <h3 id="alert-title" class="text-lg font-bold text-red-500 mb-1"></h3>
+        <p id="alert-message" class="text-sm text-white mb-2"></p>
+        <p id="alert-details" class="text-xs text-gray-400"></p>
+    </div>
+
+    <script>
+        // Data for major Chennai junctions
+        const chennaiJunctions = [
+            { name: "Guindy", lat: 13.004, lng: 80.218, marker: null, event: null },
+            { name: "T. Nagar", lat: 13.042, lng: 80.234, marker: null, event: null },
+            { name: "Tambaram", lat: 12.923, lng: 80.117, marker: null, event: null },
+            { name: "Mount Road", lat: 13.064, lng: 80.266, marker: null, event: null },
+            { name: "Anna Nagar", lat: 13.084, lng: 80.207, marker: null, event: 'Concert' },
+            { name: "Adyar", lat: 13.006, lng: 80.257, marker: null, event: null },
+            { name: "Vadapalani", lat: 13.053, lng: 80.210, marker: null, event: 'Cricket Match' },
+            { name: "Velachery", lat: 12.986, lng: 80.219, marker: null, event: null },
+            { name: "Pallavaram", lat: 12.964, lng: 80.158, marker: null, event: null },
+            { name: "Ambattur", lat: 13.097, lng: 80.150, marker: null, event: null },
+        ];
+
+        const emergencyVehicleTypes = ['Ambulance', 'Fire Truck', 'Police'];
+
+        let trafficData = [];
+        let alerts = [];
+        const congestionHistory = []; // For the line chart
+        const finesList = [];
+        const greenTimeHistory = [];
+        
+        let weather = 'Sunny';
+
+        // Initialize the map centered on Chennai with OpenStreetMap tiles
+        const map = L.map('map').setView([13.0827, 80.2707], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Heatmap layer
+        let heatLayer = L.heatLayer([], {radius: 25, maxZoom: 14}).addTo(map);
+
+        // Custom SVG icons for markers
+        const createSvgIcon = (color, flashing = false) => {
+            const svgIcon = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="#0d1320" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-map-pin ${flashing ? 'blinking' : ''}">
+                    <path d="M12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"></path>
+                    <path d="M19 12a7 7 0 1 0-14 0c0 4.25 7 9.5 7 9.5s7-5.25 7-9.5z"></path>
+                </svg>`;
+            return L.divIcon({
+                className: '', // No extra classes
+                html: svgIcon,
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
+                popupAnchor: [0, -20]
+            });
+        };
+
+        // Initialize markers on the map
+        chennaiJunctions.forEach(junction => {
+            const marker = L.marker([junction.lat, junction.lng], { icon: createSvgIcon('#22c55e') }).addTo(map);
+            junction.marker = marker;
+            marker.bindPopup(''); // Initial empty popup
+        });
+
+        // Chart.js setup
+        const chartColors = {
+            green: '#22c55e',
+            orange: '#f97316',
+            red: '#ef4444',
+            blue: '#3b82f6'
+        };
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => tooltipItems[0].label,
+                        label: (context) => context.raw + '%'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: 'white' }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: 'white', callback: (value) => value + '%' },
+                    min: 0,
+                    max: 100
+                }
+            }
+        };
+
+        const ctx1 = document.getElementById('congestionTrendChart').getContext('2d');
+        const congestionTrendChart = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Avg. Congestion',
+                    data: [],
+                    borderColor: chartColors.blue,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: chartOptions
+        });
+        
+        const ctx4 = document.getElementById('predictiveChart').getContext('2d');
+        const predictiveChart = new Chart(ctx4, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Predicted Congestion',
+                    data: [],
+                    borderColor: chartColors.red,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (tooltipItems) => tooltipItems[0].label,
+                            label: (context) => context.raw + '%'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: 'white' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: 'white', callback: (value) => value + '%' },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+
+        const ctx2 = document.getElementById('busiestJunctionsChart').getContext('2d');
+        const busiestJunctionsChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Congestion',
+                    data: [],
+                    backgroundColor: ['#ef4444', '#f97316', '#22c55e'],
+                    borderColor: '#c5c6c7',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: 'white' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: 'white', callback: (value) => value + '%' },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+
+        const ctx3 = document.getElementById('signalDistributionChart').getContext('2d');
+        const signalDistributionChart = new Chart(ctx3, {
+            type: 'pie',
+            data: {
+                labels: ['Clear', 'Moderate', 'Congested'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: [chartColors.green, chartColors.orange, chartColors.red],
+                    borderColor: '#0d1320',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e2e8f0', font: { size: 14 } }
+                    }
+                }
+            }
+        });
+
+        // Function to show corner alert
+        const showCornerAlert = (title, message) => {
+            const alertBox = document.getElementById('corner-alert');
+            document.getElementById('alert-title').textContent = title;
+            document.getElementById('alert-message').textContent = message;
+            alertBox.style.display = 'block';
+            setTimeout(() => {
+                alertBox.classList.add('fade-out');
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                    alertBox.classList.remove('fade-out');
+                }, 500);
+            }, 5000);
+        };
+
+        // Helper function for generating random license plate
+        const generateLicensePlate = () => {
+            const prefix = "TN";
+            const districtCode = Math.floor(Math.random() * 99) + 1;
+            const alphabet = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+            const number = Math.floor(Math.random() * 9999) + 1;
+            return `${prefix}-${districtCode.toString().padStart(2, '0')}-${alphabet}-${number.toString().padStart(4, '0')}`;
+        };
+
+        // Function to get a random weather condition
+        const getWeather = () => {
+            const conditions = ['Sunny', 'Sunny', 'Sunny', 'Rainy', 'Foggy'];
+            return conditions[Math.floor(Math.random() * conditions.length)];
+        };
+
+        const simulateTrafficData = () => {
+            const newTrafficData = [];
+            let totalVehicles = 0;
+            let clearCount = 0;
+            let moderateCount = 0;
+            let congestedCount = 0;
+            let accidentCount = 0;
+            let emergencyVehicleCount = 0;
+            let avgCongestion = 0;
+            
+            let totalGreenTime = 0;
+
+            alerts = [];
+            const timestamp = new Date().toLocaleTimeString();
+            weather = getWeather();
+
+            // Simulate data for each junction
+            chennaiJunctions.forEach((junction) => {
+                let vehicleCount = Math.floor(Math.random() * 201);
+                let congestionLevel = Math.floor(Math.random() * 101);
+                const hasAccident = Math.random() < 0.05;
+                const hasEmergencyVehicle = Math.random() < 0.05;
+                let emergencyVehicleType = null;
+                if(hasEmergencyVehicle) {
+                    emergencyVehicleType = emergencyVehicleTypes[Math.floor(Math.random() * emergencyVehicleTypes.length)];
+                }
+                const trafficViolation = Math.random() < 0.08;
+                let accidentSeverity = null;
+                if(hasAccident) {
+                    const severity = ['low', 'medium', 'high'];
+                    accidentSeverity = severity[Math.floor(Math.random() * severity.length)];
+                }
+
+                // Adjust congestion based on weather or event
+                if (weather === 'Rainy' || weather === 'Foggy') {
+                    congestionLevel = Math.min(100, congestionLevel + Math.floor(Math.random() * 20));
+                }
+                if (junction.event) {
+                    congestionLevel = Math.min(100, congestionLevel + Math.floor(Math.random() * 30));
+                }
+
+                let greenTime;
+                let status;
+                let color;
+                let colorClass;
+                let priorityMessage = '';
+
+                if (hasEmergencyVehicle) {
+                    emergencyVehicleCount++;
+                    if (emergencyVehicleType === 'Ambulance') {
+                        greenTime = 'Green Corridor';
+                        status = 'Ambulance Corridor Active';
+                        color = chartColors.green;
+                        colorClass = 'text-neon-clear';
+                        priorityMessage = hasAccident ? "🚑 Ambulance Priority Activated Over Accident Control" : '';
+                        alerts.push(`🚑 Ambulance Corridor Activated at ${junction.name}`);
+                        showCornerAlert('Ambulance Alert', `An ambulance has been detected at ${junction.name}. Green corridor activated.`);
+                    } else if (emergencyVehicleType === 'Fire Truck') {
+                        greenTime = 'Junction Clear';
+                        status = 'Fire Truck Priority';
+                        color = chartColors.green;
+                        colorClass = 'text-neon-clear';
+                        alerts.push(`🚒 Fire Truck Priority Activated at ${junction.name}`);
+                        showCornerAlert('Fire Truck Alert', `A fire truck is approaching ${junction.name}. Junction cleared for priority passage.`);
+                    } else if (emergencyVehicleType === 'Police') {
+                        greenTime = 'Short Green Priority';
+                        status = 'Police Priority';
+                        color = chartColors.green;
+                        colorClass = 'text-neon-clear';
+                        alerts.push(`🚓 Police Priority Activated at ${junction.name}`);
+                        showCornerAlert('Police Alert', `Police vehicle detected at ${junction.name}. Signal timings adjusted.`);
+                    }
+                } else if (hasAccident) {
+                    greenTime = 'N/A';
+                    status = `Accident - Severity: ${accidentSeverity}`;
+                    color = chartColors.red;
+                    colorClass = 'text-neon-congested';
+                    accidentCount++;
+                    const alertMessage = accidentSeverity === 'high' ? 'Major Accident at Tambaram → Traffic Rerouted' : `Accident Reported at ${junction.name}`;
+                    alerts.push(`⚠️ ${alertMessage}`);
+                    showCornerAlert('Accident Reported', `An accident has been reported at ${junction.name}. Severity: ${accidentSeverity}.`);
+                } else if (congestionLevel > 70) {
+                    greenTime = '90 sec (Extended)';
+                    status = 'Heavy Congestion';
+                    color = chartColors.red;
+                    colorClass = 'text-neon-congested';
+                    congestedCount++;
+                } else if (congestionLevel >= 30) {
+                    greenTime = '60 sec (Normal)';
+                    status = 'Moderate Congestion';
+                    color = chartColors.orange;
+                    colorClass = 'text-neon-moderate';
+                    moderateCount++;
+                } else {
+                    greenTime = '30 sec (Short)';
+                    status = 'Clear Roads';
+                    color = chartColors.green;
+                    colorClass = 'text-neon-clear';
+                    clearCount++;
+                }
+                
+                if (trafficViolation) {
+                    const licensePlate = generateLicensePlate();
+                    const violationType = ['Running Red Light', 'Speeding', 'Illegal Parking'][Math.floor(Math.random() * 3)];
+                    const fineAmount = Math.floor(Math.random() * 5 + 1) * 100;
+                    finesList.unshift({
+                        junction: junction.name,
+                        vehicle: licensePlate,
+                        violation: violationType,
+                        fine: fineAmount,
+                        time: timestamp
+                    });
+                    if (finesList.length > 10) {
+                        finesList.pop(); // Keep list size manageable
+                    }
+                }
+
+                const dataPoint = {
+                    name: junction.name,
+                    lat: junction.lat,
+                    lng: junction.lng,
+                    vehicleCount,
+                    congestionLevel,
+                    hasAccident,
+                    emergencyVehicleType,
+                    greenTime,
+                    status,
+                    color,
+                    colorClass,
+                    accidentSeverity,
+                    priorityMessage
+                };
+
+                newTrafficData.push(dataPoint);
+                totalVehicles += vehicleCount;
+                avgCongestion += congestionLevel;
+                totalGreenTime += (greenTime === '30 sec (Short)') ? 30 : ((greenTime === '60 sec (Normal)') ? 60 : 90);
+            });
+
+            trafficData = newTrafficData;
+            avgCongestion = avgCongestion / chennaiJunctions.length;
+
+            // Update stats panel
+            document.getElementById('total-signals').textContent = trafficData.length;
+            document.getElementById('clear-signals').textContent = clearCount;
+            document.getElementById('moderate-signals').textContent = moderateCount;
+            document.getElementById('congested-signals').textContent = congestedCount;
+            document.getElementById('accidents-detected').textContent = accidentCount;
+            document.getElementById('emergency-vehicles').textContent = emergencyVehicleCount;
+            document.getElementById('avg-vehicle-count').textContent = Math.round(totalVehicles / trafficData.length);
+            
+            const totalRedTime = (60 * chennaiJunctions.length * 5) - totalGreenTime;
+            const energySaved = (totalRedTime * 0.005).toFixed(2); // Simple fake calculation
+            document.getElementById('energy-saved').textContent = `${energySaved} kWh/day`;
+            
+            const co2Emission = (totalVehicles * 0.001 * (1 + avgCongestion / 100)).toFixed(2);
+            document.getElementById('co2-emission').textContent = `${co2Emission} kg/min`;
+            
+
+            // Update banner alerts
+            let eventAlert = '';
+            const activeEventJunction = chennaiJunctions.find(j => j.event);
+            if (activeEventJunction) {
+                eventAlert = `| 📢 Event Alert: ${activeEventJunction.event} at ${activeEventJunction.name} → Traffic Diversion Active`;
+            }
+            if (alerts.length === 0) {
+                document.getElementById('alerts-text').textContent = `✅ Automatic Mode Active | Weather: ${weather} ${eventAlert}`;
+                document.getElementById('broadcast-message').textContent = 'Emergency Broadcast: No active alerts.';
+            } else {
+                let broadcastMessage = alerts.join(' | ');
+                if (weather === 'Rainy' || weather === 'Foggy') {
+                    broadcastMessage = `${weather} Detected: Adjusting Signal Timings | ` + broadcastMessage;
+                }
+                document.getElementById('alerts-text').textContent = broadcastMessage + eventAlert;
+                document.getElementById('broadcast-message').textContent = `Emergency Broadcast: ${broadcastMessage}`;
+            }
+
+            // Update fines list
+            const finesListElement = document.getElementById('fines-list');
+            finesListElement.innerHTML = ''; // Clear previous list
+            if (finesList.length > 0) {
+                finesList.forEach(fine => {
+                    const fineItem = document.createElement('div');
+                    fineItem.className = 'p-3 bg-red-900 rounded-lg border border-red-700 text-sm font-mono';
+                    fineItem.innerHTML = `
+                        <p class="text-white font-bold">${fine.vehicle}</p>
+                        <p class="text-gray-300">Violation: <span class="text-yellow-300">${fine.violation}</span></p>
+                        <p class="text-gray-300">Location: ${fine.junction}</p>
+                        <p class="text-gray-300">Fine: ₹${fine.fine} | Time: ${fine.time}</p>
+                    `;
+                    finesListElement.appendChild(fineItem);
+                });
+            } else {
+                finesListElement.innerHTML = '<div class="text-gray-500 text-center py-4">No recent violations.</div>';
+            }
+            
+            // Update Leaflet markers, popups, and heatmap
+            let heatData = [];
+            trafficData.forEach((data, index) => {
+                const junction = chennaiJunctions[index];
+                const isEmergencyAlert = data.emergencyVehicleType !== null;
+                const icon = createSvgIcon(data.color, isEmergencyAlert);
+                junction.marker.setIcon(icon);
+
+                // Update popup content with suggested route for public view
+                let popupContent = `
+                    <h3 class="${data.colorClass}">${data.name}</h3>
+                    <p><strong>Congestion:</strong> ${data.congestionLevel}%</p>
+                    <p><strong>Vehicle Count:</strong> ${data.vehicleCount}</p>
+                    <p><strong>Green Time:</strong> ${data.greenTime}</p>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                `;
+                 if (data.status.includes('Closed') || data.emergencyVehicleType) {
+                    const alternateRoute = 'Suggested Alternate Route: Aravindh Road'; // Fake alternate route
+                    popupContent += `<p class="mt-2 text-yellow-300"><strong>${alternateRoute}</strong></p>`;
+                }
+                if (data.priorityMessage) {
+                     popupContent += `<p class="mt-2 text-purple-300"><strong>${data.priorityMessage}</strong></p>`;
+                }
+                
+                junction.marker.setPopupContent(popupContent);
+                heatData.push([junction.lat, junction.lng, data.congestionLevel/100]); // Heatmap data
+            });
+            heatLayer.setLatLngs(heatData);
+
+            // Update charts
+            congestionHistory.push(Math.round(avgCongestion));
+            if (congestionHistory.length > 10) {
+                congestionHistory.shift();
+            }
+
+            const chartLabels = congestionHistory.map((_, i) => `${timestamp.slice(0, -3)} -${(10 - i) * 5}s`);
+            congestionTrendChart.data.labels = chartLabels;
+            congestionTrendChart.data.datasets[0].data = congestionHistory;
+            congestionTrendChart.update();
+
+            // Predictive chart
+            if (congestionHistory.length > 1) {
+                const lastVal = congestionHistory[congestionHistory.length - 1];
+                const prevVal = congestionHistory[congestionHistory.length - 2];
+                const trend = lastVal - prevVal;
+                const predictedData = [];
+                for(let i=1; i<=10; i++){
+                    predictedData.push(Math.max(0, Math.min(100, lastVal + trend * i)));
+                }
+                const predictiveLabels = Array.from({length: 10}, (_, i) => `+${(i+1)*1} min`);
+                predictiveChart.data.labels = predictiveLabels;
+                predictiveChart.data.datasets[0].data = predictedData;
+                predictiveChart.update();
+            }
+
+            // Update busiest junctions chart
+            const sortedJunctions = [...trafficData].sort((a, b) => b.congestionLevel - a.congestionLevel).slice(0, 3);
+            busiestJunctionsChart.data.labels = sortedJunctions.map(j => j.name);
+            busiestJunctionsChart.data.datasets[0].data = sortedJunctions.map(j => j.congestionLevel);
+            busiestJunctionsChart.update();
+
+            // Update signal distribution chart
+            signalDistributionChart.data.datasets[0].data = [clearCount, moderateCount, congestedCount];
+            signalDistributionChart.update();
+        };
+
+        // Start the simulation on window load
+        window.onload = function() {
+            simulateTrafficData();
+            setInterval(simulateTrafficData, 5000);
+        };
+    </script>
+</body>
+</html>
