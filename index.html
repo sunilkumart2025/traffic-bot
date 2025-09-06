@@ -103,8 +103,13 @@
         <!-- Main Dashboard Header -->
         <div class="flex flex-col md:flex-row items-center justify-between p-4 bg-gray-900 rounded-2xl shadow-lg border border-gray-700">
             <h1 class="text-3xl font-bold text-blue-400 mb-2 md:mb-0">Chennai Traffic Command Center</h1>
-            <div id="alerts-banner" class="marquee text-lg text-yellow-300 flex-grow text-center md:text-left md:ml-8">
-                <span id="alerts-text">✅ Automatic Mode Active</span>
+            <div class="flex items-center space-x-4 ml-auto">
+                <button id="voice-toggle" class="px-4 py-2 bg-purple-600 text-white rounded-full font-semibold shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-all duration-200">
+                    Voice ON
+                </button>
+                <div id="alerts-banner" class="marquee text-lg text-yellow-300 flex-grow text-center md:text-left md:ml-8">
+                    <span id="alerts-text">✅ Automatic Mode Active</span>
+                </div>
             </div>
         </div>
 
@@ -192,6 +197,12 @@
                         <h3 class="text-center font-bold text-gray-400 mb-2">Signal Status Distribution</h3>
                         <canvas id="signalDistributionChart"></canvas>
                     </div>
+                    <!-- Chart 5: Predicted Peak Congestion -->
+                     <div class="bg-gray-800 p-4 rounded-lg h-48">
+                        <h3 class="text-center font-bold text-gray-400 mb-2">Predicted Peak Congestion</h3>
+                        <div id="prediction-text" class="text-center text-lg mt-4 text-purple-400 font-bold"></div>
+                        <canvas id="predictedPeakChart" class="hidden"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -232,6 +243,31 @@
         const greenTimeHistory = [];
         
         let weather = 'Sunny';
+        let voiceEnabled = true;
+
+        const voiceToggleBtn = document.getElementById('voice-toggle');
+        voiceToggleBtn.addEventListener('click', () => {
+            voiceEnabled = !voiceEnabled;
+            voiceToggleBtn.textContent = voiceEnabled ? 'Voice ON' : 'Voice OFF';
+            if (!voiceEnabled) {
+                window.speechSynthesis.cancel();
+            }
+        });
+
+        const speakAlerts = (alertMessage) => {
+            if (voiceEnabled && alertMessage && !window.speechSynthesis.speaking) {
+                const utterance = new SpeechSynthesisUtterance(alertMessage);
+                
+                // Optional: Select a specific voice for a "Jarvis" feel
+                const voices = window.speechSynthesis.getVoices();
+                const jarvisVoice = voices.find(voice => voice.name.includes('Google UK English Male') || voice.name.includes('Alex'));
+                if (jarvisVoice) {
+                    utterance.voice = jarvisVoice;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            }
+        };
 
         // Initialize the map centered on Chennai with OpenStreetMap tiles
         const map = L.map('map').setView([13.0827, 80.2707], 12);
@@ -420,6 +456,7 @@
             document.getElementById('alert-title').textContent = title;
             document.getElementById('alert-message').textContent = message;
             alertBox.style.display = 'block';
+            speakAlerts(`${title}. ${message}`);
             setTimeout(() => {
                 alertBox.classList.add('fade-out');
                 setTimeout(() => {
@@ -455,8 +492,8 @@
             let avgCongestion = 0;
             
             let totalGreenTime = 0;
+            let newAlerts = [];
 
-            alerts = [];
             const timestamp = new Date().toLocaleTimeString();
             weather = getWeather();
 
@@ -499,21 +536,21 @@
                         color = chartColors.green;
                         colorClass = 'text-neon-clear';
                         priorityMessage = hasAccident ? "🚑 Ambulance Priority Activated Over Accident Control" : '';
-                        alerts.push(`🚑 Ambulance Corridor Activated at ${junction.name}`);
+                        newAlerts.push(`Ambulance Corridor Activated at ${junction.name}.`);
                         showCornerAlert('Ambulance Alert', `An ambulance has been detected at ${junction.name}. Green corridor activated.`);
                     } else if (emergencyVehicleType === 'Fire Truck') {
                         greenTime = 'Junction Clear';
                         status = 'Fire Truck Priority';
                         color = chartColors.green;
                         colorClass = 'text-neon-clear';
-                        alerts.push(`🚒 Fire Truck Priority Activated at ${junction.name}`);
+                        newAlerts.push(`Fire Truck Priority Activated at ${junction.name}.`);
                         showCornerAlert('Fire Truck Alert', `A fire truck is approaching ${junction.name}. Junction cleared for priority passage.`);
                     } else if (emergencyVehicleType === 'Police') {
                         greenTime = 'Short Green Priority';
                         status = 'Police Priority';
                         color = chartColors.green;
                         colorClass = 'text-neon-clear';
-                        alerts.push(`🚓 Police Priority Activated at ${junction.name}`);
+                        newAlerts.push(`Police Priority Activated at ${junction.name}.`);
                         showCornerAlert('Police Alert', `Police vehicle detected at ${junction.name}. Signal timings adjusted.`);
                     }
                 } else if (hasAccident) {
@@ -522,8 +559,8 @@
                     color = chartColors.red;
                     colorClass = 'text-neon-congested';
                     accidentCount++;
-                    const alertMessage = accidentSeverity === 'high' ? 'Major Accident at Tambaram → Traffic Rerouted' : `Accident Reported at ${junction.name}`;
-                    alerts.push(`⚠️ ${alertMessage}`);
+                    const alertMessage = accidentSeverity === 'high' ? 'Major Accident at Tambaram. Traffic Rerouted.' : `Accident Reported at ${junction.name}.`;
+                    newAlerts.push(alertMessage);
                     showCornerAlert('Accident Reported', `An accident has been reported at ${junction.name}. Severity: ${accidentSeverity}.`);
                 } else if (congestionLevel > 70) {
                     greenTime = '90 sec (Extended)';
@@ -608,17 +645,16 @@
             const activeEventJunction = chennaiJunctions.find(j => j.event);
             if (activeEventJunction) {
                 eventAlert = `| 📢 Event Alert: ${activeEventJunction.event} at ${activeEventJunction.name} → Traffic Diversion Active`;
+                newAlerts.push(`Event detected: ${activeEventJunction.event} at ${activeEventJunction.name}. Traffic diversion is active.`);
             }
-            if (alerts.length === 0) {
-                document.getElementById('alerts-text').textContent = `✅ Automatic Mode Active | Weather: ${weather} ${eventAlert}`;
-                document.getElementById('broadcast-message').textContent = 'Emergency Broadcast: No active alerts.';
-            } else {
-                let broadcastMessage = alerts.join(' | ');
-                if (weather === 'Rainy' || weather === 'Foggy') {
-                    broadcastMessage = `${weather} Detected: Adjusting Signal Timings | ` + broadcastMessage;
-                }
+
+            if (newAlerts.length > 0) {
+                let broadcastMessage = newAlerts.join(' ');
                 document.getElementById('alerts-text').textContent = broadcastMessage + eventAlert;
                 document.getElementById('broadcast-message').textContent = `Emergency Broadcast: ${broadcastMessage}`;
+            } else {
+                document.getElementById('alerts-text').textContent = `✅ Automatic Mode Active | Weather: ${weather} ${eventAlert}`;
+                document.getElementById('broadcast-message').textContent = 'Emergency Broadcast: No active alerts.';
             }
 
             // Update fines list
@@ -704,6 +740,11 @@
             // Update signal distribution chart
             signalDistributionChart.data.datasets[0].data = [clearCount, moderateCount, congestedCount];
             signalDistributionChart.update();
+
+            // AI Traffic Demand Forecasting
+            const tNagarData = trafficData.find(j => j.name === 'T. Nagar');
+            const predictedTnagarCongestion = Math.min(100, Math.round(tNagarData.congestionLevel + (Math.random() * 20))); // Simple AI prediction
+            document.getElementById('prediction-text').textContent = `Expected Peak Congestion in T. Nagar → ${predictedTnagarCongestion}% in next 20 mins`;
         };
 
         // Start the simulation on window load
