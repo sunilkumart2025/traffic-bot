@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #1a202c; /* Tailwind's gray-900 */
+        }
+        .hero-section {
+            background-image: url('homebackground.jpg');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        .hero-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased">
+
+    <!-- 1. Hero Section -->
+    <section class="hero-section h-screen text-white flex items-center justify-center text-center p-6">
+        <div class="hero-overlay absolute inset-0"></div>
+        <div class="z-10 max-w-4xl mx-auto">
+            <h1 class="text-4xl sm:text-5xl md:text-7xl font-bold mb-4 rounded-md">Smart Traffic Management System</h1>
+            <p class="text-lg sm:text-xl md:text-2xl font-light mb-8 max-w-2xl mx-auto rounded-md">AI + IoT powered solution to reduce congestion, save time, and save lives.</p>
+        </div>
+    </section>
+
+    <!-- 2. Problem Statement -->
+    <section class="py-16 px-6 sm:px-10 lg:px-16 bg-white">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-6 text-gray-800">The Problem We're Solving</h2>
+            <p class="text-lg sm:text-xl text-gray-600 leading-relaxed">
+                Indian cities lose over ₹1.47 lakh crore annually due to traffic congestion. Emergency vehicles like ambulances lose precious time stuck at signals. Our project solves this with AI, IoT, and automation.
+            </p>
+        </div>
+    </section>
+
+    <!-- 3. Features Section -->
+    <section class="py-16 px-6 sm:px-10 lg:px-16 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12 text-gray-800">Key Features</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center text-center">
+                    <div class="bg-indigo-500 p-4 rounded-full text-white mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">Dynamic Signals</h3>
+                    <p class="text-gray-600">Green time changes based on congestion to optimize traffic flow.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center text-center">
+                    <div class="bg-red-500 p-4 rounded-full text-white mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">Ambulance Priority</h3>
+                    <p class="text-gray-600">Automatically creates a Green Corridor for emergency vehicles.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center text-center">
+                    <div class="bg-yellow-500 p-4 rounded-full text-white mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">Accident Alerts</h3>
+                    <p class="text-gray-600">Detect and reroute traffic around accidents and road closures.</p>
+                </div>
+                <!-- Feature 4 -->
+                <div class="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center text-center">
+                    <div class="bg-green-500 p-4 rounded-full text-white mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-gray-800">Live Dashboard</h3>
+                    <p class="text-gray-600">Real-time map, statistics, and charts to visualize traffic data.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Demo Preview -->
+    <section class="py-16 px-6 sm:px-10 lg:px-16 bg-white">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">See It in Action</h2>
+            <img src="https://placehold.co/800x450/e2e8f0/64748b?text=DASHBOARD+PREVIEW" alt="Smart Traffic Dashboard Preview" class="rounded-lg shadow-xl mb-8 mx-auto w-full">
+            <a href="dashboard.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105">
+                Try the Prototype
+            </a>
+        </div>
+    </section>
+
+    <!-- 5. User Panel Section -->
+    <section class="py-16 px-6 sm:px-10 lg:px-16 bg-gray-50">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">Your Personal Traffic Assistant</h2>
+            <p class="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8">
+                Get smart road suggestions, real-time traffic jam warnings, and personalized route guidance to make your commute effortless.
+            </p>
+            <a href="user.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:scale-105">
+                Go to User Panel
+            </a>
+        </div>
+    </section>
+
+    <!-- 6. Team Section -->
+    <section class="py-16 px-6 sm:px-10 lg:px-16 bg-white">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">The Team</h2>
+            <div class="flex flex-wrap justify-center items-center gap-8">
+                <!-- Team Member 1 -->
+                <div class="flex flex-col items-center">
+                    <img src="https://placehold.co/100x100/334155/e2e8f0?text=Jane" alt="Team Member Jane" class="w-24 h-24 rounded-full mb-2 shadow-md">
+                    <p class="font-semibold text-gray-800">Jane Doe</p>
+                </div>
+                <!-- Team Member 2 -->
+                
+            </div>
+            <p class="mt-8 text-lg text-gray-600">Built with passion for SIH.</p>
+        </div>
+    </section>
+
+    <!-- 7. Footer -->
+    <footer class="bg-gray-800 text-white py-12 px-6 sm:px-10 lg:px-16">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center text-center sm:text-left">
+            <div class="mb-4 sm:mb-0">
+                <p class="text-lg font-semibold">Smart Traffic Management System</p>
+                <p class="text-gray-400 mt-1">Making Every Second Count on the Road 🚦.</p>
+            </div>
+            
+        </div>
+    </footer>
+
+</body>
+</html>
